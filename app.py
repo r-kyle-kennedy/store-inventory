@@ -51,23 +51,55 @@ def add_csv():
         session.commit()
 
 
+def get_valid_id(list):
+    choice = input(f'Enter product id (1-{len(list)}) :  ')
+    try:
+        choice = int(choice)
+        if choice in list:
+            return session.query(Product).filter(Product.product_id==choice).first()
+        else:
+            raise ValueError
+    except:
+        input(f'{choice} is not a valid input, press enter to try again')
+        return get_valid_id(list)
+
+
+def add_product():
+    print('Add Product')
+    name = input('Product name:  ')
+    quantity = int(input('Product quantity: '))
+    price = clean_price(input('Product price(ie: $19.99):  '))
+    date = datetime.date.today()
+    session.add(Product(product_name=name, product_quantity=quantity, product_price=price, date_updated=date))
+    session.commit()
+
 def app():
     app_running = True
     while app_running:
         choice = menu().lower()
         if choice == 'v':
-            #look product up by # ID
-            print(f'choice was: {choice}')
+            #look product up by ID#
+            id_list = []
+            for item in session.query(Product):
+                id_list.append(item.product_id)
+            id_choice = get_valid_id(id_list)
+            print()
+            print(f'Name: {id_choice.product_name}')
+            print(f'Quantity: {id_choice.product_quantity}')
+            print(f'Price: ${"{:.2f}".format(float(id_choice.product_price)/100)}')
+            print(f'Last Updated: {id_choice.date_updated}')
         elif choice == 'a':
-            #add new product
-            print(f'choice was: {choice}')
+            print()
+            add_product()
         elif choice == 'b':
             #backup database to .csv file
             print(f'choice was: {choice}')
         elif choice == 'q':
             #quit program
             app_running = False
+            print()
             print('Exiting Program. Goodbye.')
+            print()
         else:
             input(f'{choice} is not a valid input, press enter to return to the menu.')
 
