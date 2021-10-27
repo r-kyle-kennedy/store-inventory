@@ -15,8 +15,15 @@ def menu():
 
 
 def clean_price(price_str):
-    price_float = float(price_str[1:])
-    return int((price_float * 1000) / 10)
+    try:
+        if price_str[0] == '$':
+            price_float = float(price_str[1:])
+            return int((price_float * 1000) / 10)
+        else:
+            raise ValueError
+    except:
+        input(f'{price_str} is not a valid price. press enter to try again.')
+        return clean_price(input('Product price(ie: $19.99):  '))
 
 
 def clean_date(date_str):
@@ -64,14 +71,54 @@ def get_valid_id(list):
         return get_valid_id(list)
 
 
+def get_valid_quantity():
+    quantity = input('Product quantity: ')
+    try:
+        quantity = int(quantity)
+        return quantity
+    except:
+        input(f'{quantity} is not a valid input. Press enter to try again')
+        return get_valid_quantity()
+
+
+def update_or_add(new_product):
+    product_in_db = session.query(Product).filter(Product.product_name==new_product.product_name).one_or_none()
+    if product_in_db:
+        edit = session.query(Product).filter(Product.product_name==new_product.product_name).first()
+        edit.product_quantity = new_product.product_quantity
+        edit.product_price = new_product.product_price
+        edit.date_updated = new_product.date_updated
+    else:
+        session.add(new_product)
+
+
 def add_product():
-    print('Add Product')
-    name = input('Product name:  ')
-    quantity = int(input('Product quantity: '))
-    price = clean_price(input('Product price(ie: $19.99):  '))
-    date = datetime.date.today()
-    session.add(Product(product_name=name, product_quantity=quantity, product_price=price, date_updated=date))
-    session.commit()
+    not_correct = True
+    while not_correct:
+        print('Add Product')
+        name = input('Product name:  ')
+        quantity = get_valid_quantity()
+        price = clean_price(input('Product price(ie: $19.99):  '))
+        date = datetime.date.today()
+        correct_input = input(f'''
+            \nName: {name}
+            \rQuantity: {quantity}
+            \rPrice: ${"{:.2f}".format(float(price)/100)}
+            \rLast Updated: {date}
+            \rIs this correct(y/n)?  ''')
+        if correct_input.lower() == 'y':
+            not_correct=False
+            new_product = Product(product_name=name, product_quantity=quantity, product_price=price, date_updated=date)
+            update_or_add(new_product)
+            session.commit()
+
+
+def backup():
+    with open('backup.csv', 'w') as csvfile:
+        csvfile.write('product_name,product_price,product_quantity,date_updated')
+        for product in session.query(Product):
+            csvfile.write(f'\n{product.product_name},${"{:.2f}".format(float(product.product_price)/100)},{product.product_quantity},{product.date_updated.month}/{product.date_updated.day}/{product.date_updated.year}')
+
 
 def app():
     app_running = True
@@ -93,7 +140,9 @@ def app():
             add_product()
         elif choice == 'b':
             #backup database to .csv file
-            print(f'choice was: {choice}')
+            print('Creating Backup')
+            backup()
+            print('Backup saved to backup.csv')
         elif choice == 'q':
             #quit program
             app_running = False

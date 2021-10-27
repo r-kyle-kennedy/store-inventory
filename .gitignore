@@ -114,3 +114,4 @@ dmypy.json
 .pyre/
 
 inventory.db
+backup.csv
